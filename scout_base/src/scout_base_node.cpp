@@ -31,10 +31,21 @@ int main(int argc, char **argv) {
   rclcpp::init(argc, argv);
   //   std::signal(SIGINT, DetachRobot);
 
-  robot = std::make_shared<ScoutBaseRos>("scout");
-  if (robot->Initialize()) {
-    std::cout << "Robot initialized, start running ..." << std::endl;
-    robot->Run();
+  while (rclcpp::ok()) {
+    try {
+      robot = std::make_shared<ScoutBaseRos>("scout");
+      if (robot->Initialize()) {
+        std::cout << "Robot initialized, start running ..." << std::endl;
+        robot->Run();
+      }
+      robot->Stop();
+      return 0;
+    } catch (const std::exception &e) {
+      RCLCPP_ERROR(rclcpp::get_logger("scout_base_node"), "Exception: %s", e.what());
+    } catch (...) {
+      RCLCPP_ERROR(rclcpp::get_logger("scout_base_node"), "Unknown exception");
+    }
+    RCLCPP_INFO(rclcpp::get_logger("scout_base_node"), "Retrying...");
   }
 
   return 0;
