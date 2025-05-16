@@ -53,6 +53,7 @@ void ScoutBaseRos::LoadParameters() {
   RCLCPP_INFO_STREAM(this->get_logger(), "- base frame name: " << base_frame_);
   RCLCPP_INFO_STREAM(this->get_logger(),
                      "- odom topic name: " << odom_topic_name_);
+  RCLCPP_INFO_STREAM(this->get_logger(), "- cmd vel stamped: " << cmd_vel_stamped_);
 
   RCLCPP_INFO_STREAM(this->get_logger(),
                      "- is scout mini: " << std::boolalpha << is_scout_mini_);

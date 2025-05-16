@@ -21,6 +21,8 @@ def generate_launch_description():
                                                 description='Base link frame id')
     odom_topic_arg = DeclareLaunchArgument('odom_topic_name', default_value='odom',
                                            description='Odometry topic name')
+    cmd_vel_stamped_arg = DeclareLaunchArgument('cmd_vel_stamped', default_value='false',
+                                                description='Subscribe TwistStamped instead of Twist on cmd_vel')
 
     is_scout_mini_arg = DeclareLaunchArgument('is_scout_mini', default_value='false',
                                           description='Scout mini model')
@@ -45,6 +47,7 @@ def generate_launch_description():
                 'odom_frame': launch.substitutions.LaunchConfiguration('odom_frame'),
                 'base_frame': launch.substitutions.LaunchConfiguration('base_frame'),
                 'odom_topic_name': launch.substitutions.LaunchConfiguration('odom_topic_name'),
+                'cmd_vel_stamped': launch.substitutions.LaunchConfiguration('cmd_vel_stamped'),
                 'is_scout_mini': launch.substitutions.LaunchConfiguration('is_scout_mini'),
                 'is_omni_wheel': launch.substitutions.LaunchConfiguration('is_omni_wheel'),
                 'auto_reconnect': launch.substitutions.LaunchConfiguration('auto_reconnect'),
@@ -58,6 +61,7 @@ def generate_launch_description():
         odom_frame_arg,
         base_link_frame_arg,
         odom_topic_arg,
+        cmd_vel_stamped_arg,
         is_scout_mini_arg,
         is_omni_wheel_arg,
         auto_reconnect_arg,
