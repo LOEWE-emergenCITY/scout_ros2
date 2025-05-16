@@ -72,10 +72,10 @@ class ScoutMessenger {
     joint_state_msg.name.resize(4);
     joint_state_msg.position.resize(4);
     joint_state_msg.velocity.resize(4);
-    joint_state_msg.name[0] = "front_right_wheel_joint";
-    joint_state_msg.name[1] = "front_left_wheel_joint";
-    joint_state_msg.name[2] = "rear_left_wheel_joint";
-    joint_state_msg.name[3] = "rear_right_wheel_joint";
+    joint_state_msg.name[0] = "front_right_wheel";
+    joint_state_msg.name[1] = "front_left_wheel";
+    joint_state_msg.name[2] = "rear_left_wheel";
+    joint_state_msg.name[3] = "rear_right_wheel";
 
     tf_broadcaster_ = std::make_shared<tf2_ros::TransformBroadcaster>(node_);
     }
