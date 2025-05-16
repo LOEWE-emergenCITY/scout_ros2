@@ -101,6 +101,7 @@ class ScoutMessenger {
             // actuator_hs_state
             uint8_t motor_id = actuator.actuator_hs_state[i].motor_id;
 
+            status_msg.actuator_states[motor_id].motor_id = motor_id;
             status_msg.actuator_states[motor_id].rpm =
               actuator.actuator_hs_state[i].rpm;
             status_msg.actuator_states[motor_id].current =
