@@ -17,6 +17,7 @@
 #include <rclcpp/rclcpp.hpp>
 #include <nav_msgs/msg/odometry.hpp>
 #include <geometry_msgs/msg/twist_stamped.hpp>
+#include <sensor_msgs/msg/joint_state.hpp>
 #include <tf2_ros/transform_broadcaster.h>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 
@@ -66,6 +67,16 @@ class ScoutMessenger {
             std::bind(&ScoutMessenger::LightCmdCallback, this,
                       std::placeholders::_1));
 
+    joint_state_pub_ = node_->create_publisher<sensor_msgs::msg::JointState>(
+            "joint_states", 10);
+    joint_state_msg.name.resize(4);
+    joint_state_msg.position.resize(4);
+    joint_state_msg.velocity.resize(4);
+    joint_state_msg.name[0] = "front_right_wheel_joint";
+    joint_state_msg.name[1] = "front_left_wheel_joint";
+    joint_state_msg.name[2] = "rear_left_wheel_joint";
+    joint_state_msg.name[3] = "rear_right_wheel_joint";
+
     tf_broadcaster_ = std::make_shared<tf2_ros::TransformBroadcaster>(node_);
     }
 
@@ -102,12 +113,14 @@ class ScoutMessenger {
             uint8_t motor_id = actuator.actuator_hs_state[i].motor_id;
 
             status_msg.actuator_states[motor_id].motor_id = motor_id;
-            status_msg.actuator_states[motor_id].rpm =
-              actuator.actuator_hs_state[i].rpm;
+            const int16_t rpm = actuator.actuator_hs_state[i].rpm;
+            status_msg.actuator_states[motor_id].rpm = rpm;
             status_msg.actuator_states[motor_id].current =
               actuator.actuator_hs_state[i].current;
             status_msg.actuator_states[motor_id].pulse_count =
               actuator.actuator_hs_state[i].pulse_count;
+            joint_state_msg.velocity[motor_id] = rpm * 2.0 * M_PI / 60.0;
+            joint_state_msg.position[motor_id] += joint_state_msg.velocity[motor_id] * dt;
 
             // actuator_ls_state
             motor_id = actuator.actuator_ls_state[i].motor_id;
@@ -121,6 +134,8 @@ class ScoutMessenger {
             status_msg.actuator_states[motor_id].driver_state =
               actuator.actuator_ls_state[i].driver_state;
         }
+        joint_state_msg.header.stamp = current_time_;
+        joint_state_pub_->publish(joint_state_msg);
 
         status_msg.light_control_enabled = state.light_state.enable_cmd_ctrl;
         status_msg.front_light_state.mode = state.light_state.front_light.mode;
@@ -164,10 +179,12 @@ class ScoutMessenger {
 
     std::mutex twist_mutex_;
     geometry_msgs::msg::Twist current_twist_;
+    sensor_msgs::msg::JointState joint_state_msg;
 
     rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPtr odom_pub_;
     rclcpp::Publisher<scout_msgs::msg::ScoutStatus>::SharedPtr status_pub_;
     rclcpp::Publisher<scout_msgs::msg::ScoutBmsStatus>::SharedPtr bms_status_pub_;
+    rclcpp::Publisher<sensor_msgs::msg::JointState>::SharedPtr joint_state_pub_;
 
     rclcpp::Subscription<geometry_msgs::msg::Twist>::SharedPtr motion_cmd_sub_;
     rclcpp::Subscription<geometry_msgs::msg::TwistStamped>::SharedPtr motion_stamped_cmd_sub_;
