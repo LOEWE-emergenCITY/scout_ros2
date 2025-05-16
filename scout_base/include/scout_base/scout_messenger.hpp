@@ -37,6 +37,7 @@ class ScoutMessenger {
     void SetOdometryFrame(std::string frame) { odom_frame_ = frame; }
     void SetBaseFrame(std::string frame) { base_frame_ = frame; }
     void SetOdometryTopicName(std::string name) { odom_topic_name_ = name; }
+    void SetCmdVelStamped(bool value) { cmd_vel_stamped_ = value; }
 
     void SetSimulationMode(int loop_rate) {
         simulated_robot_ = true;
@@ -54,14 +55,17 @@ class ScoutMessenger {
       "scout_bms_status", 10);
 
         // cmd subscriber
-    motion_cmd_sub_ = node_->create_subscription<geometry_msgs::msg::Twist>(
-            "cmd_vel", 5,
-            std::bind(&ScoutMessenger::TwistCmdCallback, this,
-                      std::placeholders::_1));
-    motion_stamped_cmd_sub_ = node_->create_subscription<geometry_msgs::msg::TwistStamped>(
-            "cmd_vel", 5,
-            std::bind(&ScoutMessenger::TwistStampedCmdCallback, this,
-                      std::placeholders::_1));
+    if (cmd_vel_stamped_) {
+      motion_stamped_cmd_sub_ = node_->create_subscription<geometry_msgs::msg::TwistStamped>(
+          "cmd_vel", 5,
+          std::bind(&ScoutMessenger::TwistStampedCmdCallback, this,
+                    std::placeholders::_1));
+    } else {
+      motion_cmd_sub_ = node_->create_subscription<geometry_msgs::msg::Twist>(
+          "cmd_vel", 5,
+          std::bind(&ScoutMessenger::TwistCmdCallback, this,
+                    std::placeholders::_1));
+    }
     light_cmd_sub_ = node_->create_subscription<scout_msgs::msg::ScoutLightCmd>(
             "light_control", 5,
             std::bind(&ScoutMessenger::LightCmdCallback, this,
@@ -173,6 +177,7 @@ class ScoutMessenger {
     std::string odom_frame_;
     std::string base_frame_;
     std::string odom_topic_name_;
+    bool cmd_vel_stamped_ = false;
 
     bool simulated_robot_ = false;
     int sim_control_rate_ = 50;
@@ -248,8 +253,8 @@ class ScoutMessenger {
   void LightCmdCallback(const scout_msgs::msg::ScoutLightCmd::SharedPtr msg) {
         if (!simulated_robot_) {
             if (msg->cmd_ctrl_allowed) {
-                AgxLightMode f_mode;
-                uint8_t f_value;
+                AgxLightMode f_mode = AgxLightMode::CONST_OFF;
+                uint8_t f_value = 0;
 
                 switch (msg->front_mode) {
                     case scout_msgs::msg::ScoutLightCmd::LIGHT_CONST_OFF: {

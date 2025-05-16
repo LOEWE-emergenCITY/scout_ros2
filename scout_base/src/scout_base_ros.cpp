@@ -20,6 +20,7 @@ ScoutBaseRos::ScoutBaseRos(std::string node_name)
   this->declare_parameter("odom_frame", "odom");
   this->declare_parameter("base_frame", "base_link");
   this->declare_parameter("odom_topic_name", "odom");
+  this->declare_parameter("cmd_vel_stamped", false);
 
   this->declare_parameter("is_scout_mini", false);
   this->declare_parameter("is_omni_wheel", false);
@@ -37,6 +38,7 @@ void ScoutBaseRos::LoadParameters() {
   this->get_parameter<std::string>("odom_frame", odom_frame_);
   this->get_parameter<std::string>("base_frame", base_frame_);
   this->get_parameter<std::string>("odom_topic_name", odom_topic_name_);
+  this->get_parameter<bool>("cmd_vel_stamped", cmd_vel_stamped_);
 
   this->get_parameter<bool>("is_scout_mini", is_scout_mini_);
   this->get_parameter<bool>("is_omni_wheel", is_omni_wheel_);
@@ -139,6 +141,7 @@ void ScoutBaseRos::Run() {
     messenger->SetOdometryFrame(odom_frame_);
     messenger->SetBaseFrame(base_frame_);
     messenger->SetOdometryTopicName(odom_topic_name_);
+    messenger->SetCmdVelStamped(cmd_vel_stamped_);
     if (simulated_robot_) messenger->SetSimulationMode(sim_control_rate_);
 
     // connect to robot and setup ROS subscription
