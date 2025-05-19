@@ -32,6 +32,7 @@ int main(int argc, char **argv) {
   //   std::signal(SIGINT, DetachRobot);
 
   while (rclcpp::ok()) {
+    RCLCPP_INFO_SKIPFIRST(rclcpp::get_logger("scout_base_node"), "Retrying...");
     try {
       robot = std::make_shared<ScoutBaseRos>("scout");
       if (robot->Initialize()) {
@@ -45,7 +46,6 @@ int main(int argc, char **argv) {
     } catch (...) {
       RCLCPP_ERROR(rclcpp::get_logger("scout_base_node"), "Unknown exception");
     }
-    RCLCPP_INFO(rclcpp::get_logger("scout_base_node"), "Retrying...");
   }
 
   return 0;
