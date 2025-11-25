@@ -39,11 +39,11 @@ class ScoutMessenger {
       if (!detector.Connect(port_name)){
           RCLCPP_ERROR_STREAM(logger,
               "Could not connect to scout base via port: " << port_name);
-        return std::make_pair(ProtocolVersion::UNKONWN, false);
+        return std::make_pair(ProtocolVersion::UNKNOWN, false);
       }
 
       ProtocolVersion protocol = detector.DetectProtocolVersion(5);
-      if(protocol == ProtocolVersion::UNKONWN){
+      if(protocol == ProtocolVersion::UNKNOWN){
         RCLCPP_ERROR_STREAM(
               logger,
               "Unsupported scout connection protocol");
