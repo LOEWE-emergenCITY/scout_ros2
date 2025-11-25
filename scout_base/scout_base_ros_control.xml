@@ -1,0 +1,10 @@
+<library path="scout_base">
+    <class name="scout_base_hardware_interface/ScoutBaseHardwareInterface"
+           type="scout_base_hardware_interface::ScoutBaseHardwareInterface"
+           base_class_type="hardware_interface::SystemInterface">
+        <description>
+            ros2 system interface to control a scout base by setting linear/angular velocities.
+            Also reads back localization within map frame.
+        </description>
+    </class>
+</library>

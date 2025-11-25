@@ -15,6 +15,7 @@
 namespace westonrobot {
 ScoutBaseRos::ScoutBaseRos(std::string node_name)
     : rclcpp::Node(node_name), keep_running_(false) {
+
   this->declare_parameter("port_name", "can0");
 
   this->declare_parameter("odom_frame", "odom");
@@ -30,7 +31,8 @@ ScoutBaseRos::ScoutBaseRos(std::string node_name)
   this->declare_parameter("control_rate", 50);
 
   LoadParameters();
-}
+  }
+
 
 void ScoutBaseRos::LoadParameters() {
   this->get_parameter<std::string>("port_name", port_name_);
@@ -71,73 +73,24 @@ void ScoutBaseRos::LoadParameters() {
 }
 
 bool ScoutBaseRos::Initialize() {
-  if (is_scout_mini_) {
-    RCLCPP_INFO_STREAM(this->get_logger(), "Robot base: Scout Mini");
-  } else {
-    RCLCPP_INFO_STREAM(this->get_logger(), "Robot base: Scout");
+  
+  if(is_omni_wheel_){
+    return ScoutMessenger<ScoutMiniOmniRobot>::CreateRobotInterface(port_name_, omni_robot_, this->get_logger());
+  }
+  else{
+    return ScoutMessenger<ScoutRobot>::CreateRobotInterface(port_name_, is_scout_mini_, robot_, this->get_logger());
   }
 
-  ProtocolDetector detector;
-  if (detector.Connect(port_name_)) {
-    auto proto = detector.DetectProtocolVersion(5);
-    if (proto == ProtocolVersion::AGX_V1) {
-      RCLCPP_INFO_STREAM(this->get_logger(), "Detected protocol: AGX_V1");
-      if (!is_omni_wheel_) {
-        is_omni_ = false;
-        robot_ = std::make_shared<ScoutRobot>(ProtocolVersion::AGX_V1,
-                                              is_scout_mini_);
-        if (is_scout_mini_) {
-          RCLCPP_INFO_STREAM(
-              this->get_logger(),
-              "Creating interface for Scout Mini with AGX_V1 Protocol");
-        } else {
-          RCLCPP_INFO_STREAM(
-              this->get_logger(),
-              "Creating interface for Scout with AGX_V1 Protocol");
-        }
-      } else {
-        is_omni_ = true;
-        omni_robot_ = std::unique_ptr<ScoutMiniOmniRobot>(
-            new ScoutMiniOmniRobot(ProtocolVersion::AGX_V1));
-        RCLCPP_INFO_STREAM(
-            this->get_logger(),
-            "Creating interface for Scout Mini Omni with AGX_V1 Protocol");
-      }
-    } else if (proto == ProtocolVersion::AGX_V2) {
-      RCLCPP_INFO_STREAM(this->get_logger(), "Detected protocol: AGX_V2");
-      if (!is_omni_wheel_) {
-        is_omni_ = false;
-        robot_ = std::make_shared<ScoutRobot>(ProtocolVersion::AGX_V2,
-                                              is_scout_mini_);
-        RCLCPP_INFO_STREAM(this->get_logger(),
-                           "Creating interface for Scout with AGX_V2 Protocol");
-      } else {
-        is_omni_ = true;
-        omni_robot_ = std::unique_ptr<ScoutMiniOmniRobot>(
-            new ScoutMiniOmniRobot(ProtocolVersion::AGX_V2));
-        RCLCPP_INFO_STREAM(
-            this->get_logger(),
-            "Creating interface for Scout Mini Omni with AGX_V2 Protocol");
-      }
-    } else {
-      RCLCPP_INFO_STREAM(this->get_logger(), "Detected protocol: UNKONWN");
-      return false;
-    }
-  } else {
-    return false;
-  }
-
-  return true;
 }
 
 void ScoutBaseRos::Stop() { keep_running_ = false; }
 
 void ScoutBaseRos::Run() {
   // instantiate a ROS messenger
-  if (!is_omni_) {
+  if (!is_omni_wheel_) {
     std::unique_ptr<ScoutMessenger<ScoutRobot>> messenger =
         std::unique_ptr<ScoutMessenger<ScoutRobot>>(
-            new ScoutMessenger<ScoutRobot>(robot_, this));
+            new ScoutMessenger<ScoutRobot>(robot_, shared_from_this()));
 
     messenger->SetOdometryFrame(odom_frame_);
     messenger->SetBaseFrame(base_frame_);
@@ -179,7 +132,7 @@ void ScoutBaseRos::Run() {
   } else {
     std::unique_ptr<ScoutMessenger<ScoutMiniOmniRobot>> messenger =
         std::unique_ptr<ScoutMessenger<ScoutMiniOmniRobot>>(
-            new ScoutMessenger<ScoutMiniOmniRobot>(omni_robot_, this));
+            new ScoutMessenger<ScoutMiniOmniRobot>(omni_robot_, shared_from_this()));
 
     messenger->SetOdometryFrame(odom_frame_);
     messenger->SetBaseFrame(base_frame_);

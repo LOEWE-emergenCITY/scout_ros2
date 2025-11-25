@@ -26,18 +26,75 @@
 #include "scout_msgs/msg/scout_bms_status.hpp"
 
 #include "ugv_sdk/mobile_robot/scout_robot.hpp"
+#include "ugv_sdk/utilities/protocol_detector.hpp"
 
 namespace westonrobot {
 template <typename ScoutType>
 class ScoutMessenger {
    public:
-  ScoutMessenger(std::shared_ptr<ScoutType> scout, rclcpp::Node *node)
+
+    std::pair<ProtocolVersion, bool> static VerifyProtocol(std::string port_name, rclcpp::Logger& logger){
+
+      ProtocolDetector detector;
+      if (!detector.Connect(port_name)){
+          RCLCPP_ERROR_STREAM(logger,
+              "Could not connect to scout base via port: " << port_name);
+        return std::make_pair(ProtocolVersion::UNKONWN, false);
+      }
+
+      ProtocolVersion protocol = detector.DetectProtocolVersion(5);
+      if(protocol == ProtocolVersion::UNKONWN){
+        RCLCPP_ERROR_STREAM(
+              logger,
+              "Unsupported scout connection protocol");
+        return std::make_pair(protocol, false);
+      }
+      else {
+        RCLCPP_INFO_STREAM(logger,
+                           "Detected protocol: " << ((protocol == ProtocolVersion::AGX_V1) ? "AGX_V1" : "AGX_V2"));
+      }
+
+      return std::make_pair(protocol, true);
+    }
+
+    bool static CreateRobotInterface(std::string port_name, std::shared_ptr<ScoutMiniOmniRobot>& robot, rclcpp::Logger logger ) {
+
+      auto [protocol, success] = VerifyProtocol(port_name, logger);
+      if(!success){
+        return false;
+      }
+ 
+      robot = std::unique_ptr<ScoutMiniOmniRobot>(
+            new ScoutMiniOmniRobot(protocol));
+
+      RCLCPP_INFO_STREAM(logger, "Creating interface for ScoutMiniOmni robot");
+
+      return true;
+    }
+
+    bool static CreateRobotInterface(std::string port_name, bool is_scout_mini, std::shared_ptr<ScoutRobot>& robot, rclcpp::Logger  logger) {
+
+      auto [protocol, success] = VerifyProtocol(port_name, logger);
+      if(!success){
+        return false;
+      }
+
+      robot = std::make_shared<ScoutRobot>(protocol,
+                                            is_scout_mini);
+
+      RCLCPP_INFO_STREAM(logger,
+                      "Creating interface for Scout " << (is_scout_mini ? "Mini" : "") << " robot");
+      return true;
+    }
+
+  ScoutMessenger(std::shared_ptr<ScoutType> scout, std::shared_ptr<rclcpp::Node> node)
     : scout_(scout), node_(node) {}
 
     void SetOdometryFrame(std::string frame) { odom_frame_ = frame; }
     void SetBaseFrame(std::string frame) { base_frame_ = frame; }
     void SetOdometryTopicName(std::string name) { odom_topic_name_ = name; }
     void SetCmdVelStamped(bool value) { cmd_vel_stamped_ = value; }
+    void SetEnableCmdSubs(bool value) { enable_cmd_subs = value; }
 
     void SetSimulationMode(int loop_rate) {
         simulated_robot_ = true;
@@ -54,22 +111,25 @@ class ScoutMessenger {
     bms_status_pub_ = node_->create_publisher<scout_msgs::msg::ScoutBmsStatus>(
       "scout_bms_status", 10);
 
+
+    if (enable_cmd_subs) {
         // cmd subscriber
-    if (cmd_vel_stamped_) {
-      motion_stamped_cmd_sub_ = node_->create_subscription<geometry_msgs::msg::TwistStamped>(
-          "cmd_vel", 5,
-          std::bind(&ScoutMessenger::TwistStampedCmdCallback, this,
-                    std::placeholders::_1));
-    } else {
-      motion_cmd_sub_ = node_->create_subscription<geometry_msgs::msg::Twist>(
-          "cmd_vel", 5,
-          std::bind(&ScoutMessenger::TwistCmdCallback, this,
-                    std::placeholders::_1));
-    }
-    light_cmd_sub_ = node_->create_subscription<scout_msgs::msg::ScoutLightCmd>(
-            "light_control", 5,
-            std::bind(&ScoutMessenger::LightCmdCallback, this,
+      if (cmd_vel_stamped_) {
+        motion_stamped_cmd_sub_ = node_->create_subscription<geometry_msgs::msg::TwistStamped>(
+            "cmd_vel", 5,
+            std::bind(&ScoutMessenger::TwistStampedCmdCallback, this,
                       std::placeholders::_1));
+      } else {
+        motion_cmd_sub_ = node_->create_subscription<geometry_msgs::msg::Twist>(
+            "cmd_vel", 5,
+            std::bind(&ScoutMessenger::TwistCmdCallback, this,
+                      std::placeholders::_1));
+      }
+      light_cmd_sub_ = node_->create_subscription<scout_msgs::msg::ScoutLightCmd>(
+              "light_control", 5,
+              std::bind(&ScoutMessenger::LightCmdCallback, this,
+                        std::placeholders::_1));
+    }
 
     joint_state_pub_ = node_->create_publisher<sensor_msgs::msg::JointState>(
             "joint_states", 10);
@@ -172,12 +232,13 @@ class ScoutMessenger {
 
    private:
     std::shared_ptr<ScoutType> scout_;
-    rclcpp::Node *node_;
+    std::shared_ptr<rclcpp::Node> node_;
 
     std::string odom_frame_;
     std::string base_frame_;
     std::string odom_topic_name_;
     bool cmd_vel_stamped_ = false;
+    bool enable_cmd_subs = true;
 
     bool simulated_robot_ = false;
     int sim_control_rate_ = 50;
